@@ -1,6 +1,7 @@
 const express = require('express');
 const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
 const QRCode = require('qrcode-terminal');
+const { sendMessage } = require('./messageSender'); // Importar la función de envío
 
 const app = express();
 app.use(express.json()); // Middleware para parsear JSON
@@ -42,11 +43,9 @@ async function start() {
     app.post('/send', async (req, res) => {
         const { chatId, message } = req.body;
         try {
-            await sock.sendMessage(chatId, { text: message });
-            console.log(`Mensaje enviado a ${chatId}: ${message}`);
+            await sendMessage(sock, chatId, message); // Llamar a la función de envío de mensajes
             res.status(200).json({ status: 'success', message: 'Mensaje enviado' });
         } catch (error) {
-            console.error('Error al enviar el mensaje:', error);
             res.status(500).json({ status: 'error', message: 'Error al enviar el mensaje' });
         }
     });
