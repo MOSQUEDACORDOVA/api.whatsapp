@@ -1,50 +1,21 @@
 const express = require('express');
 const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
-const QRCode = require('qrcode');
+const QRCode = require('qrcode-terminal');
 
 const app = express();
-const port = 3000;
+app.use(express.json()); // Middleware para parsear JSON
 
-
-// Variable para almacenar el QR
-let qrCode;
-
-// Ruta para la página de inicio
-app.get('/', (req, res) => {
-    res.send('<h1>Bienvenido al Generador de Código QR para WhatsApp</h1><a href="/qr">Ver Código QR</a>');
-});
-
-// Ruta para mostrar el QR
-app.get('/qr', (req, res) => {
-    res.send('<h1>Código QR para WhatsApp</h1><img id="qr" /><script src="https://code.jquery.com/jquery-3.6.0.min.js"></script><script>setInterval(() => {$.get("/qr-data", (data) => {$("#qr").attr("src", data);});}, 1000);</script>');
-});
-
-// Ruta para obtener los datos del QR
-app.get('/qr-data', (req, res) => {
-    if (qrCode) {
-        console.log('Enviando código QR al navegador...'); // Mensaje de depuración
-        res.send(qrCode);
-    } else {
-        console.log('Código QR no disponible, revisa la generación.'); // Mensaje de depuración
-        res.status(404).send('Código QR no disponible.');
-    }
-});
-
-// Función para iniciar el socket
 async function start() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
     const sock = makeWASocket({
         auth: state,
-        printQRInTerminal: false, // No imprimir en terminal
+        printQRInTerminal: true,
     });
 
     sock.ev.on('creds.update', saveCreds);
-
-    // Escuchar actualizaciones de conexión
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect } = update;
-        console.log('Actualización de conexión:', connection);
         if (connection === 'close') {
             console.log('Conexión cerrada, intentando reconectar...', lastDisconnect.error);
             start(); // Intentar reconectar
@@ -53,23 +24,38 @@ async function start() {
         }
     });
 
+    // Escuchar mensajes entrantes
+    sock.ev.on('messages.upsert', async (m) => {
+        const msg = m.messages[0];
+        if (!msg.key.fromMe && m.type === 'notify') {
+            console.log(`Nuevo mensaje: ${msg.message.conversation}`);
+        }
+    });
+
     // Escuchar la generación del código QR
     sock.ev.on('qr', (qr) => {
         console.log('Generando código QR...');
-        QRCode.toDataURL(qr, (err, url) => {
-            if (err) {
-                console.error('Error generando el código QR:', err);
-                return;
-            }
-            qrCode = url; // Almacenar el QR en la variable
-            console.log('Código QR generado y almacenado:', qrCode); // Confirmación de generación
-        });
+        QRCode.generate(qr, { small: true });
+    });
+
+    // Endpoint para enviar mensajes
+    app.post('/send', async (req, res) => {
+        const { chatId, message } = req.body;
+        try {
+            await sock.sendMessage(chatId, { text: message });
+            console.log(`Mensaje enviado a ${chatId}: ${message}`);
+            res.status(200).json({ status: 'success', message: 'Mensaje enviado' });
+        } catch (error) {
+            console.error('Error al enviar el mensaje:', error);
+            res.status(500).json({ status: 'error', message: 'Error al enviar el mensaje' });
+        }
+    });
+
+    // Iniciar el servidor
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`Servidor escuchando en el puerto ${PORT}`);
     });
 }
 
-// Iniciar el socket y luego el servidor Express
-start().then(() => {
-    app.listen(port, () => {
-        console.log(`Servidor escuchando en http://localhost:${port}`);
-    });
-});
+start();

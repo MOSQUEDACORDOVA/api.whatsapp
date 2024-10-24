@@ -9,5 +9,14 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js"
+  },
+  "name": "api.whatsapp.mosquedacordova.com",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:MOSQUEDACORDOVA/api.whatsapp",
+  "author": "MOSQUEDACORDOVA <elmosquedacordova@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "nodemon": "^3.1.7"
   }
 }
