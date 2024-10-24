@@ -1,13 +1,10 @@
 const express = require('express');
 const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
 const QRCode = require('qrcode');
-const cors = require('cors');
 
 const app = express();
 const port = 3000;
 
-// Habilitar CORS
-app.use(cors());
 
 // Variable para almacenar el QR
 let qrCode;
