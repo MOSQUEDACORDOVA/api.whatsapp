@@ -41,9 +41,9 @@ async function start() {
 
     // Endpoint para enviar mensajes
     app.post('/send', async (req, res) => {
-        const { chatId, message } = req.body;
+        const { chatId, message, type, caption } = req.body; // Agregar 'caption' al body
         try {
-            await sendMessage(sock, chatId, message); // Llamar a la función de envío de mensajes
+            await sendMessage(sock, chatId, message, type, caption); // Pasar 'caption' a sendMessage
             res.status(200).json({ status: 'success', message: 'Mensaje enviado' });
         } catch (error) {
             res.status(500).json({ status: 'error', message: 'Error al enviar el mensaje' });
